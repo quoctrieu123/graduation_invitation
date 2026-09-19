@@ -177,6 +177,26 @@
     background: linear-gradient(90deg, transparent, var(--gold-deep), transparent);
   }
 
+  .heart {
+    display: inline-block;
+    width: .72em;
+    height: .72em;
+    margin-left: .32em;
+    vertical-align: -.03em;
+    fill: var(--gold);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .heart { animation: beat 2600ms ease-in-out 1200ms infinite; }
+  }
+
+  @keyframes beat {
+    0%, 62%, 100% { transform: scale(1); }
+    70%           { transform: scale(1.13); }
+    78%           { transform: scale(1.02); }
+    86%           { transform: scale(1.09); }
+  }
+
   #guestName {
     margin: 0;
     font-size: clamp(1.45rem, 6.5vw, 2.1rem);
@@ -794,6 +814,33 @@
     } catch (e) { return ""; }
   }
 
+  /* ---------- 0c. a heart beside the name ----------
+     Typed straight into a name, a heart character lands in whatever fallback
+     font the phone has, usually as a full-colour emoji that fights the card.
+     So a marker in the name - "<3", or a heart someone pasted - is swapped
+     for this drawn one, which takes the card's gold and its type size. */
+
+  /* the trailing branch is the surrogate pair for the heart emoji block
+     U+1F493..U+1F49F, written out so the pattern needs no /u flag */
+  var HEART_MARK = /(<3|♥|♡|❤️?|\uD83D[\uDC93-\uDC9F])/g;
+  var HEART_SVG = '<svg class="heart" viewBox="0 0 24 22" aria-hidden="true">'
+    + '<path d="M12 20.6S1.7 14 1.7 7.5C1.7 4 4.4 1.4 7.5 1.4c2 0 3.7 1 4.5 2.6'
+    + '.8-1.6 2.5-2.6 4.5-2.6 3.1 0 5.8 2.6 5.8 6.1 0 6.5-10.3 13.1-10.3 13.1Z"/></svg>';
+
+  function paintGuest(el, name) {
+    HEART_MARK.lastIndex = 0;
+    var wanted = HEART_MARK.test(name);
+    var text = name.replace(HEART_MARK, " ").replace(/\s+/g, " ").trim();
+
+    el.textContent = text;
+    if (wanted) {
+      /* the markup is a constant, never the guest's own text, so this
+         cannot carry anything injected through the link */
+      el.insertAdjacentHTML("beforeend", HEART_SVG);
+    }
+    return text;
+  }
+
   /* ---------- 1. personalise the addressee ---------- */
 
   function cleanName(raw) {
@@ -809,7 +856,7 @@
   var guest = cleanName(decodeGuest(params.get("g"))
                         || params.get("name") || params.get("to") || "");
   if (guest) {
-    document.getElementById("guestName").textContent = guest;
+    paintGuest(document.getElementById("guestName"), guest);
   }
 
   /* ---------- 2. calendar link, built from the printed date ---------- */
@@ -856,7 +903,7 @@
     }
 
     if (guest) {
-      nameEl.textContent = guest;
+      paintGuest(nameEl, guest);
     } else {
       nameEl.parentNode.removeChild(nameEl);
     }
