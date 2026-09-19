@@ -1,0 +1,5 @@
+# Only the built invitation is published. The working source, the reference
+# images and the original photo stay off the public repo.
+*
+!.gitignore
+!index.html
