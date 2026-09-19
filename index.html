@@ -14,7 +14,7 @@
   img { max-width: 100%; }
   [hidden] { display: none !important; }
 </style>
-<title>Triệu Kinh Quốc Graduation</title>
+<title>You have an Invitation</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500&family=Great+Vibes&display=swap">
@@ -755,9 +755,18 @@
     return out;
   }
 
+  /* The salt is derived from the name, not drawn at random, so one guest
+     always gets the exact same link. Regenerating the list months later
+     reproduces what was already sent, instead of orphaning it. */
+  function saltFor(name) {
+    var s = name + CODE_KEY, h = 7;
+    for (var i = 0; i < s.length; i++) h = (h * 131 + s.charCodeAt(i)) >>> 0;
+    return (h % 251) + 3;
+  }
+
   function encodeGuest(name) {
     var bytes = toBytes(name);
-    var salt = Math.floor(Math.random() * 251) + 3;
+    var salt = saltFor(name);
     var sum = 0, i;
     for (i = 0; i < bytes.length; i++) sum = (sum + bytes[i]) & 255;
     var out = [salt, (sum ^ keyAt(0, salt)) & 255];
@@ -801,7 +810,6 @@
                         || params.get("name") || params.get("to") || "");
   if (guest) {
     document.getElementById("guestName").textContent = guest;
-    document.title = guest + " — Triệu Kinh Quốc Graduation";
   }
 
   /* ---------- 2. calendar link, built from the printed date ---------- */
@@ -825,7 +833,8 @@
   var card = document.getElementById("card");
   var intro = document.getElementById("intro");
   var running = document.documentElement.classList.contains("intro-on")
-                && params.get("generate") !== "1";
+                && params.get("generate") !== "1"
+                && window.__MAKE_LINKS !== true;
 
   function litCard() { if (card) card.classList.add("lit"); }
 
@@ -931,109 +940,6 @@
     window.addEventListener("resize", function () { resize(); seed(); });
   }
 
-  /* ---------- 5. host-only link generator: append ?generate=1 ---------- */
-
-  if (params.get("generate") === "1") {
-    var stage = document.querySelector(".stage");
-    if (card) card.hidden = true;
-
-    var panel = document.createElement("section");
-    panel.className = "gen";
-
-    var h2 = document.createElement("h2");
-    h2.textContent = "Guest link generator";
-    var lede = document.createElement("p");
-    lede.textContent = "Paste the address where you published the invitation, then list one guest per line. Each person gets a link carrying an opaque code, so no name shows in the link or its chat preview, and one guest's link cannot be turned into another's. This panel only appears with ?generate=1, so your guests never see it.";
-
-    var baseLabel = document.createElement("label");
-    baseLabel.setAttribute("for", "genBase");
-    baseLabel.textContent = "Where the invitation is published";
-
-    var baseInput = document.createElement("textarea");
-    baseInput.id = "genBase";
-    baseInput.rows = 2;
-    baseInput.style.minHeight = "0";
-    baseInput.value = window.location.origin + window.location.pathname;
-
-    var label = document.createElement("label");
-    label.setAttribute("for", "genNames");
-    label.textContent = "Guest names";
-
-    var ta = document.createElement("textarea");
-    ta.id = "genNames";
-    ta.placeholder = "One guest per line";
-
-    var row = document.createElement("div");
-    row.className = "actions";
-
-    var makeBtn = document.createElement("button");
-    makeBtn.type = "button";
-    makeBtn.className = "action";
-    makeBtn.textContent = "Build links";
-
-    var copyBtn = document.createElement("button");
-    copyBtn.type = "button";
-    copyBtn.className = "action";
-    copyBtn.textContent = "Copy all";
-
-    var out = document.createElement("ul");
-    out.className = "gen-out";
-
-    function base() {
-      return (baseInput.value || "").trim().replace(/[?#].*$/, "").replace(/\s+/g, "");
-    }
-
-    function build() {
-      out.textContent = "";
-      var lines = ta.value.split("\n").map(cleanName).filter(Boolean);
-      lines.forEach(function (n) {
-        var li = document.createElement("li");
-        var who = document.createElement("span");
-        who.className = "who";
-        who.textContent = n;
-        var url = document.createElement("span");
-        url.className = "url";
-        url.textContent = base() + "?g=" + encodeGuest(n);
-        li.appendChild(who);
-        li.appendChild(url);
-        out.appendChild(li);
-      });
-      copyBtn.textContent = "Copy all";
-    }
-
-    makeBtn.addEventListener("click", build);
-    ta.addEventListener("input", build);
-    baseInput.addEventListener("input", build);
-
-    copyBtn.addEventListener("click", function () {
-      var text = Array.prototype.map.call(out.querySelectorAll("li"), function (li) {
-        return li.querySelector(".who").textContent + "\t" + li.querySelector(".url").textContent;
-      }).join("\n");
-      if (!text) { build(); return; }
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(function () {
-          copyBtn.textContent = "Copied";
-        }, function () {
-          copyBtn.textContent = "Press Ctrl+C";
-        });
-      } else {
-        copyBtn.textContent = "Select and copy manually";
-      }
-    });
-
-    row.appendChild(makeBtn);
-    row.appendChild(copyBtn);
-    panel.appendChild(h2);
-    panel.appendChild(lede);
-    panel.appendChild(baseLabel);
-    panel.appendChild(baseInput);
-    panel.appendChild(label);
-    panel.appendChild(ta);
-    panel.appendChild(row);
-    panel.appendChild(out);
-    stage.appendChild(panel);
-    build();
-  }
 })();
 </script>
 </body>
